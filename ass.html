@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Data</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Student Table</h1>
+        <table id="studentTable">
+            <thead>
+                <tr>
+                    <th>Year</th>
+                    <th>Semester</th>
+                    <th>College</th>
+                    <th>Program</th>
+                    <th>Nationality</th>
+                    <th>Number of Students</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- Data will be dynamically inserted here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    // URL for the API request
+    const URL = "https://data.gov.bh/api/explore/v2.1/catalog/datasets/01-statistics-of-students-nationalities_updated/records?where=colleges%20like%20%22IT%22%20AND%20the_programs%20like%20%22bachelor%22&limit=100";
+
+    // Function to fetch and display student data
+    async function fetchStudentData() {
+        try {
+            // Use a CORS proxy to bypass potential cross-origin restrictions
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(URL);
+            
+            // Fetch data with extended timeout and error handling
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10-second timeout
+            
+            const response = await fetch(proxyUrl, {
+                method: 'GET',
+                signal: controller.signal,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+            
+            // Clear the timeout
+            clearTimeout(timeoutId);
+            
+            // Check if the response is successful
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            // Parse the JSON response
+            const data = await response.json();
+            
+            // Get the table body element
+            const tableBody = document.getElementById('tableBody');
+            
+            // Clear any existing rows
+            tableBody.innerHTML = '';
+            
+            // Check if results exist
+            if (data.results && data.results.length > 0) {
+                // Loop through each record and create table rows
+                data.results.forEach(record => {
+                    const row = document.createElement('tr');
+                    
+                    // Create table cells for each piece of data
+                    // Use nullish coalescing (??) to provide 'N/A' if value is null or undefined
+                    const cells = [
+                        record.year ?? 'N/A',
+                        record.semester ?? 'N/A',
+                        record.colleges ?? 'N/A',
+                        record.the_programs ?? 'N/A',
+                        record.nationality ?? 'N/A',
+                        record.number_of_students ?? 'N/A'
+                    ];
+                    
+                    // Add cells to the row
+                    cells.forEach(cellData => {
+                        const cell = document.createElement('td');
+                        cell.textContent = cellData;
+                        row.appendChild(cell);
+                    });
+                    
+                    // Add row to table body
+                    tableBody.appendChild(row);
+                });
+            } else {
+                // If no data is found, create a row indicating that
+                const noDataRow = document.createElement('tr');
+                const noDataCell = document.createElement('td');
+                noDataCell.colSpan = 6;
+                noDataCell.textContent = 'No data found';
+                noDataRow.appendChild(noDataCell);
+                tableBody.appendChild(noDataRow);
+            }
+        } catch (error) {
+            console.error('Error fetching student data:', error);
+            
+            // Display error in the table
+            const tableBody = document.getElementById('tableBody');
+            const errorRow = document.createElement('tr');
+            const errorCell = document.createElement('td');
+            errorCell.colSpan = 6;
+            errorCell.textContent = `Error: ${error.message}`;
+            errorCell.style.color = 'red';
+            errorRow.appendChild(errorCell);
+            tableBody.appendChild(errorRow);
+        }
+    }
+
+    // Call the function when the page loads
+    document.addEventListener('DOMContentLoaded', fetchStudentData);
+    </script>
+</body>
+</html>
